@@ -151,14 +151,13 @@ void save_to_file()
 		fprintf(fp, "%ld;%ld;%s\n", activities_list[i].start_time, activities_list[i].end_time, 
 				activities_list[i].description);
 	}
-
 	fclose(fp);
 }
 
 void load_file()
 {
-	FILE *fp;
-	time_t rawtime;
+    FILE *fp;
+    time_t rawtime;
     struct tm *info;
     char buffer[80];
 
@@ -166,12 +165,12 @@ void load_file()
 
     strftime(buffer, 80, "%Y-%m-%d", localtime(&rawtime));
 
-	char filename[80];
-	snprintf(filename, sizeof(filename), "%s/Timesheets/timesheet-%s.txt", getenv("HOME"), buffer);
-	fp = fopen(filename, "r");
+    char filename[80];
+    snprintf(filename, sizeof(filename), "%s/Timesheets/timesheet-%s.txt", getenv("HOME"), buffer);
+    fp = fopen(filename, "r");
 
 	int i = 0;
-	
+
 	while (EOF != fscanf(fp, "%ld;%ld;%s", &activities_list[i].start_time, &activities_list[i].end_time, 
 				activities_list[i].description)) i++;
 }
