@@ -9,6 +9,7 @@ void start_new_activity();
 void stop_current_activity();
 void print_activities();
 void save_to_file();
+void load_file();
 
 typedef struct activities
 {
@@ -22,8 +23,8 @@ activity activities_list[100];
 
 int main()
 {
-
-	strcpy(current_activity.description,"N/A\n");
+	strcpy(current_activity.description,"N/A");
+	load_file();
 	char command;
 
 	while(command != 'q')
@@ -63,7 +64,7 @@ void print_current_activity()
 
 	printf("=================================================="
 			"==================================================\n"
-			"Current activity: %sStart time: %sDuration: %ld mins.\n"
+			"Current activity: %s\nStart time: %sDuration: %ld mins.\n"
 			"=================================================="
 			"==================================================\n",
 			current_activity.description, ctime(&current_activity.start_time), 
@@ -86,7 +87,7 @@ void print_activities()
 		strftime(buf1, sizeof(buf1), "%a %Y-%m-%d %H:%M:%S %Z", &ts1);
 		strftime(buf2, sizeof(buf2), "%a %Y-%m-%d %H:%M:%S %Z", &ts2);
 
-		printf("\nStart time: %s\nEnd time: %s\nActivity: %s"
+		printf("\nStart time: %s\nEnd time: %s\nActivity: %s\n"
 				"--------------------------------------------------"
 				"--------------------------------------------------", 
 				buf1, buf2, activities_list[i].description);
@@ -99,6 +100,7 @@ void start_new_activity()
 
 	printf("\nWhat are you doing: ");
 	fgets(current_activity.description, 256, stdin);
+	current_activity.description[strcspn(current_activity.description, "\n")] = 0;
 }
 
 void stop_current_activity()
@@ -110,7 +112,7 @@ void stop_current_activity()
 		if(!activities_list[i].start_time)
 		{	
 			activities_list[i] = current_activity;
-			strcpy(current_activity.description, "N/A\n");
+			strcpy(current_activity.description, "N/A");
 			break;
 		}
 	}
@@ -135,7 +137,7 @@ void save_to_file()
 	
 	for(int i = 0; activities_list[i].start_time; i++)
 	{
-		fprintf(fp, "%ld\n%ld\n%s\n", activities_list[i].start_time, activities_list[i].end_time, 
+		fprintf(fp, "%ld;%ld;%s\n", activities_list[i].start_time, activities_list[i].end_time, 
 				activities_list[i].description);
 	}
 
@@ -145,23 +147,20 @@ void save_to_file()
 void load_file()
 {
 	FILE *fp;
+	time_t rawtime;
+    struct tm *info;
+    char buffer[80];
 
+    time(&rawtime);
+
+    strftime(buffer, 80, "%Y-%m-%d", localtime(&rawtime));
+
+	char filename[80];
 	snprintf(filename, sizeof(filename), "%s/Timesheets/timesheet-%s.txt", getenv("HOME"), buffer);
-
 	fp = fopen(filename, "r");
 
-	char buffer[255];
+	int i = 0;
 	
-	while (fgets(buffer, sizeof buffer, stream) != NULL)	
-	{
-		
-	}
-	if (feof(stream)) 
-	{
-
-	}
-	else
-	{
-
-	}	
+	while (EOF != fscanf(fp, "%ld;%ld;%s", &activities_list[i].start_time, &activities_list[i].end_time, 
+				activities_list[i].description)) i++;
 }
