@@ -24,6 +24,7 @@ activity activities_list[100];
 int main()
 {
 	strcpy(current_activity.description,"N/A");
+	current_activity.start_time = time(NULL);
 	load_file();
 	char command;
 
@@ -61,19 +62,20 @@ int main()
 void print_current_activity()
 {
 	time_t time_now = time(NULL);
+	char buf[80];
+
+	strftime(buf, sizeof(buf), "%H:%M:%S", localtime(&current_activity.start_time));
 
 	printf("=================================================="
 			"==================================================\n"
-			"Current activity: %s\nStart time: %sDuration: %ld mins.\n"
+			"Current activity: %s\nStart time: %s\nDuration: %ld mins.\n"
 			"=================================================="
 			"==================================================\n",
-			current_activity.description, ctime(&current_activity.start_time), 
-			(time_now - current_activity.start_time)/60);
+			current_activity.description, buf, (time_now - current_activity.start_time)/60);
 }
 
 void print_activities()
 {
-	struct tm ts1, ts2;
 	char buf1[80], buf2[80];
 
 	printf("\nPast activities:\n"
@@ -81,11 +83,8 @@ void print_activities()
 			"--------------------------------------------------"); 
 	for(int i = 0; activities_list[i].start_time; i++)
 	{
-		ts1 = *localtime(&activities_list[i].start_time);
-		ts2 = *localtime(&activities_list[i].end_time);
-
-		strftime(buf1, sizeof(buf1), "%a %Y-%m-%d %H:%M:%S %Z", &ts1);
-		strftime(buf2, sizeof(buf2), "%a %Y-%m-%d %H:%M:%S %Z", &ts2);
+		strftime(buf1, sizeof(buf1), "%H:%M:%S", localtime(&activities_list[i].start_time));
+		strftime(buf2, sizeof(buf2), "%H:%M:%S", localtime(&activities_list[i].end_time));
 
 		printf("\nStart time: %s\nEnd time: %s\nActivity: %s\n"
 				"--------------------------------------------------"
