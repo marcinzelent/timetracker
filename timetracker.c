@@ -4,9 +4,10 @@
 #include <string.h>
 #include <curses.h>
 
-void print_current_activity();
+void print_new_activity();
 void start_new_activity();
-void stop_current_activity();
+void stop_new_activity();
+void edit_new_activity();
 void print_activities();
 void save_to_file();
 void load_file();
@@ -18,22 +19,22 @@ typedef struct activities
 	char description[100];
 } activity;
 
-activity current_activity;
+activity new_activity;
 activity activities_list[100];
 
 int main()
 {
-	strcpy(current_activity.description,"N/A");
-	current_activity.start_time = time(NULL);
+	strcpy(new_activity.description,"N/A");
+	new_activity.start_time = time(NULL);
 	load_file();
 	char command;
 
 	while(command != 'q')
 	{
 		system("clear");
-		print_current_activity();
+		print_new_activity();
 		print_activities();
-		printf("\n\n[s]tart tracking new activity | sto[p] current activity | sa[v]e to file | [q]uit: ");		
+		printf("\n\n[s]tart/sto[p]/[e]dit new activity | sa[v]e to file | [q]uit: ");		
 		fgets(&command, 256, stdin);
 		switch(command)
 		{
@@ -42,7 +43,11 @@ int main()
 				break;
 
 			case 'p':
-				stop_current_activity();
+				stop_new_activity();
+				break;
+
+			case 'e':
+				edit_new_activity();
 				break;
 
 			case 'v':
@@ -59,19 +64,19 @@ int main()
 	return 0;
 }
 
-void print_current_activity()
+void print_new_activity()
 {
 	time_t time_now = time(NULL);
 	char buf[80];
 
-	strftime(buf, sizeof(buf), "%H:%M:%S", localtime(&current_activity.start_time));
+	strftime(buf, sizeof(buf), "%H:%M:%S", localtime(&new_activity.start_time));
 
 	printf("=================================================="
 			"==================================================\n"
 			"Current activity: %s\nStart time: %s\nDuration: %ld mins.\n"
 			"=================================================="
 			"==================================================\n",
-			current_activity.description, buf, (time_now - current_activity.start_time)/60);
+			new_activity.description, buf, (time_now - new_activity.start_time)/60);
 }
 
 void print_activities()
@@ -95,27 +100,34 @@ void print_activities()
 
 void start_new_activity()
 {
-	current_activity.start_time = time(NULL);
+	new_activity.start_time = time(NULL);
 
 	printf("\nWhat are you doing: ");
-	fgets(current_activity.description, 256, stdin);
-	current_activity.description[strcspn(current_activity.description, "\n")] = 0;
+	fgets(new_activity.description, 256, stdin);
+	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
 }
 
-void stop_current_activity()
+void stop_new_activity()
 {
-	current_activity.end_time = time(NULL);
+	new_activity.end_time = time(NULL);
 
 	for(int i = 0; i < 100; i++)
 	{
 		if(!activities_list[i].start_time)
 		{	
-			activities_list[i] = current_activity;
-			strcpy(current_activity.description, "N/A");
+			activities_list[i] = new_activity;
+			strcpy(new_activity.description, "N/A");
 			break;
 		}
 	}
 
+}
+
+void edit_new_activity()
+{
+	printf("\nWhat are you doing: ");
+	fgets(new_activity.description, 256, stdin);
+	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
 }
 
 void save_to_file()
