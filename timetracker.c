@@ -3,6 +3,9 @@
 #include <time.h>
 #include <string.h>
 #include <curses.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 void print_new_activity();
 void start_new_activity();
@@ -120,7 +123,6 @@ void stop_new_activity()
 			break;
 		}
 	}
-
 }
 
 void edit_new_activity()
@@ -134,16 +136,13 @@ void save_to_file()
 {
 	FILE *fp;
 	time_t rawtime;
-    struct tm *info;
-    char buffer[80];
+	struct tm *info;
+	char buffer[80], filename[80];
 
-    time(&rawtime);
-
-    strftime(buffer, 80, "%Y-%m-%d", localtime(&rawtime));
-
-	char filename[80];
+	time(&rawtime);
+	strftime(buffer, 80, "%Y-%m-%d", localtime(&rawtime));
+	
 	snprintf(filename, sizeof(filename), "%s/Timesheets/timesheet-%s.txt", getenv("HOME"), buffer);
-
 	fp = fopen(filename, "w");
 	
 	for(int i = 0; activities_list[i].start_time; i++)
@@ -156,21 +155,26 @@ void save_to_file()
 
 void load_file()
 {
-    FILE *fp;
-    time_t rawtime;
-    struct tm *info;
-    char buffer[80];
+	FILE *fp;
+	time_t rawtime;
+	struct tm *info;
+	char buffer[80], filename[80], timesheets_dir[80];
+	int i = 0;
+	struct stat st = {0};
 
-    time(&rawtime);
+	snprintf(timesheets_dir, sizeof(timesheets_dir), "%s/Timesheets/", getenv("HOME"));
 
-    strftime(buffer, 80, "%Y-%m-%d", localtime(&rawtime));
+	if (stat(timesheets_dir, &st) == -1) 
+	{
+		mkdir(timesheets_dir, 0700);
+	}
 
-    char filename[80];
+	time(&rawtime);
+	strftime(buffer, 80, "%Y-%m-%d", localtime(&rawtime));
+	
     snprintf(filename, sizeof(filename), "%s/Timesheets/timesheet-%s.txt", getenv("HOME"), buffer);
     fp = fopen(filename, "r");
-
-	int i = 0;
-
+	if(fp == NULL) fp = fopen(filename, "w");
 	while (EOF != fscanf(fp, "%ld;%ld;%s", &activities_list[i].start_time, &activities_list[i].end_time, 
 				activities_list[i].description)) i++;
 }
