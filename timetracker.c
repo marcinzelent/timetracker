@@ -12,8 +12,9 @@ void start_new_activity();
 void stop_new_activity();
 void edit_new_activity();
 void print_activities();
-void save_to_file();
-void load_file();
+void save_to_file(char *filepath);
+void load_file(char *filepath);
+char *create_data_files();
 
 typedef struct activities
 {
@@ -29,7 +30,7 @@ int main()
 {
 	strcpy(new_activity.description,"N/A");
 	new_activity.start_time = time(NULL);
-	load_file();
+	load_file(create_data_files());
 	char command;
 
 	while(command != 'q')
@@ -54,7 +55,7 @@ int main()
 				break;
 
 			case 'v':
-				save_to_file();
+				save_to_file(create_data_files());
 				break;
 
 			case 'q':
@@ -132,19 +133,34 @@ void edit_new_activity()
 	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
 }
 
-void save_to_file()
+char *create_data_files()
 {
 	FILE *fp;
 	time_t rawtime;
 	struct tm *info;
-	char buffer[80], filename[80];
-
+	char timesheets_dir[80], date[11];
+	static char	filepath[80];
+	struct stat st = {0};
+	
+	snprintf(timesheets_dir, sizeof(timesheets_dir), "%s/Timesheets", getenv("HOME"));
+	if(stat(timesheets_dir, &st) == -1) mkdir(timesheets_dir, 0700);
+	
 	time(&rawtime);
-	strftime(buffer, 80, "%Y-%m-%d", localtime(&rawtime));
-	
-	snprintf(filename, sizeof(filename), "%s/Timesheets/timesheet-%s.txt", getenv("HOME"), buffer);
-	fp = fopen(filename, "w");
-	
+	strftime(date, sizeof(date), "%Y-%m-%d", localtime(&rawtime));
+	snprintf(filepath, sizeof(filepath), "%s/timesheet-%s.txt", timesheets_dir, date);
+	if(access(filepath, F_OK) == -1) 
+	{
+		fp = fopen(filepath, "w");
+		fclose(fp);
+	}
+	return filepath;
+}
+
+void save_to_file(char *filepath)
+{
+	FILE *fp;
+
+	fp = fopen(filepath, "w");
 	for(int i = 0; activities_list[i].start_time; i++)
 	{
 		fprintf(fp, "%ld;%ld;%s\n", activities_list[i].start_time, activities_list[i].end_time, 
@@ -153,28 +169,13 @@ void save_to_file()
 	fclose(fp);
 }
 
-void load_file()
+void load_file(char *filepath)
 {
 	FILE *fp;
-	time_t rawtime;
-	struct tm *info;
-	char buffer[80], filename[80], timesheets_dir[80];
-	int i = 0;
-	struct stat st = {0};
-
-	snprintf(timesheets_dir, sizeof(timesheets_dir), "%s/Timesheets/", getenv("HOME"));
-
-	if (stat(timesheets_dir, &st) == -1) 
-	{
-		mkdir(timesheets_dir, 0700);
-	}
-
-	time(&rawtime);
-	strftime(buffer, 80, "%Y-%m-%d", localtime(&rawtime));
+	int i;
 	
-    snprintf(filename, sizeof(filename), "%s/Timesheets/timesheet-%s.txt", getenv("HOME"), buffer);
-    fp = fopen(filename, "r");
-	if(fp == NULL) fp = fopen(filename, "w");
+	fp = fopen(filepath, "r");
 	while (EOF != fscanf(fp, "%ld;%ld;%s", &activities_list[i].start_time, &activities_list[i].end_time, 
 				activities_list[i].description)) i++;
+
 }
