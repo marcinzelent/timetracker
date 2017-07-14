@@ -2,21 +2,22 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <curses.h>
+#include <ncurses.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <panel.h>
 
-void print_new_activity();
-void start_new_activity();
+void print_new_activity(WINDOW *win);
+void print_activities(WINDOW *win);
+WINDOW *start_new_activity();
 void stop_new_activity();
-void edit_new_activity();
-void print_activities();
+WINDOW *edit_new_activity();
 void save_to_file(char *filepath);
 void load_file(char *filepath);
 char *create_data_files();
 
-typedef struct activities
+typedef struct activity
 {
 	time_t start_time;
 	time_t end_time;
@@ -26,89 +27,104 @@ typedef struct activities
 activity new_activity;
 activity activities_list[100];
 
-int main()
+int main(int argc, char *argv[])
 {
+	char command;
+	WINDOW *new_act_win;
+
+    initscr();
+	noecho();
+	cbreak();
+	curs_set(0);
+
 	strcpy(new_activity.description,"N/A");
 	new_activity.start_time = time(NULL);
-	load_file(create_data_files());
-	char command;
 
+	load_file(create_data_files());
+	
 	while(command != 'q')
 	{
-		system("clear");
-		print_new_activity();
-		print_activities();
-		printf("\n\n[s]tart/sto[p]/[e]dit new activity | sa[v]e to file | [q]uit: ");		
-		fgets(&command, 256, stdin);
+		WINDOW *cur_act_win = newwin(5, COLS, 0, 0);
+		wborder(cur_act_win, '|', '|', '-', '-', '+', '+', '+', '+');
+		print_new_activity(cur_act_win);
+		wrefresh(cur_act_win);
+
+		WINDOW *past_act_win = newwin(LINES-5, COLS, 5, 0);
+		wborder(past_act_win, '|', '|', ' ', '-', '|', '|', '+', '+');
+		print_activities(past_act_win);
+		wrefresh(past_act_win);
+		
+		command = wgetch(cur_act_win);
 		switch(command)
 		{
 			case 's':
-				start_new_activity();
+				new_act_win = start_new_activity();
 				break;
-
 			case 'p':
 				stop_new_activity();
 				break;
-
 			case 'e':
 				edit_new_activity();
 				break;
-
 			case 'v':
 				save_to_file(create_data_files());
 				break;
-
 			case 'q':
 				break;
-
 			default :
 				break;
 		}
 	}
-	return 0;
+    endwin();
+    return 0;
 }
 
-void print_new_activity()
+void print_new_activity(WINDOW *win)
 {
 	time_t time_now = time(NULL);
-	char buf[80];
+	char start_time[80];
 
-	strftime(buf, sizeof(buf), "%H:%M:%S", localtime(&new_activity.start_time));
+	strftime(start_time, sizeof(start_time), "%H:%M:%S", localtime(&new_activity.start_time));
 
-	printf("=================================================="
-			"==================================================\n"
-			"Current activity: %s\nStart time: %s\nDuration: %ld mins.\n"
-			"=================================================="
-			"==================================================\n",
-			new_activity.description, buf, (time_now - new_activity.start_time)/60);
+	mvwprintw(win, 1, 1, "Current activity: %s", new_activity.description);
+	mvwprintw(win, 2, 1, "Start time: %s", start_time);
+	mvwprintw(win, 3, 1, "Duration: %ld", (time_now - new_activity.start_time)/60);
+
+    wrefresh(win);
 }
 
-void print_activities()
+void print_activities(WINDOW *win)
 {
-	char buf1[80], buf2[80];
+	char start_time[80], end_time[80];
 
-	printf("\nPast activities:\n"
-			"--------------------------------------------------"
-			"--------------------------------------------------"); 
+	mvwprintw(win, 0, 1, "Past activities:");
 	for(int i = 0; activities_list[i].start_time; i++)
 	{
-		strftime(buf1, sizeof(buf1), "%H:%M:%S", localtime(&activities_list[i].start_time));
-		strftime(buf2, sizeof(buf2), "%H:%M:%S", localtime(&activities_list[i].end_time));
+		strftime(start_time, sizeof(start_time), "%H:%M:%S", localtime(&activities_list[i].start_time));
+		strftime(end_time, sizeof(end_time), "%H:%M:%S", localtime(&activities_list[i].end_time));
 
-		printf("\nStart time: %s\nEnd time: %s\nActivity: %s\n"
-				"--------------------------------------------------"
-				"--------------------------------------------------", 
-				buf1, buf2, activities_list[i].description);
+		mvwprintw(win, 4 * i + 1, 1, "Start time: %s", start_time); 
+		mvwprintw(win, 4 * i + 2, 1, "End time: %s", end_time);
+		mvwprintw(win, 4 * i + 3, 1, "Activity: %s", activities_list[i].description);
 	}
+
+	wrefresh(win);
 }
 
-void start_new_activity()
+WINDOW *start_new_activity()
 {
 	new_activity.start_time = time(NULL);
+	WINDOW *win = newwin(10, 50, (LINES-10)/2, (COLS-50)/2);
+	wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
 
-	printf("\nWhat are you doing: ");
-	fgets(new_activity.description, 256, stdin);
+	mvwprintw(win, 1, 1, "What are you doing: ");
+	echo();
+	mvwgetstr(win, 2, 1, new_activity.description);
+	noecho();
 	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
+	wrefresh(win);
+	
+	return win;
 }
 
 void stop_new_activity()
@@ -126,11 +142,19 @@ void stop_new_activity()
 	}
 }
 
-void edit_new_activity()
+WINDOW *edit_new_activity()
 {
-	printf("\nWhat are you doing: ");
-	fgets(new_activity.description, 256, stdin);
+	WINDOW *win = newwin(10, 50, (LINES-10)/2, (COLS-50)/2);
+	wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+
+	mvwprintw(win, 1, 1, "What are you doing: ");
+	echo();
+	mvwgetstr(win, 2, 1, new_activity.description);
+	noecho();
 	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
+	wrefresh(win);
+	
+	return win;
 }
 
 char *create_data_files()
