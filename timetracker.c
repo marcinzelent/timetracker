@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
@@ -6,7 +5,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <panel.h>
 
 void print_new_activity(WINDOW *win);
 void print_activities(WINDOW *win);
