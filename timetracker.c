@@ -8,9 +8,9 @@
 
 void print_new_activity(WINDOW *win);
 void print_activities(WINDOW *win);
-WINDOW *start_new_activity();
+void start_new_activity();
 void stop_new_activity();
-WINDOW *edit_new_activity();
+void edit_new_activity();
 void save_to_file(char *filepath);
 void load_file(char *filepath);
 char *create_data_files();
@@ -28,7 +28,6 @@ activity activities_list[100];
 int main(int argc, char *argv[])
 {
 	char command;
-	WINDOW *new_act_win;
 
     initscr();
 	noecho();
@@ -56,7 +55,7 @@ int main(int argc, char *argv[])
 		switch(command)
 		{
 			case 's':
-				new_act_win = start_new_activity();
+				start_new_activity();
 				break;
 			case 'p':
 				stop_new_activity();
@@ -105,24 +104,14 @@ void print_activities(WINDOW *win)
 		mvwprintw(win, 4 * i + 2, 1, "End time: %s", end_time);
 		mvwprintw(win, 4 * i + 3, 1, "Activity: %s", activities_list[i].description);
 	}
-
+	
 	wrefresh(win);
 }
 
-WINDOW *start_new_activity()
+void start_new_activity()
 {
 	new_activity.start_time = time(NULL);
-	WINDOW *win = newwin(10, 50, (LINES-10)/2, (COLS-50)/2);
-	wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-
-	mvwprintw(win, 1, 1, "What are you doing: ");
-	echo();
-	mvwgetstr(win, 2, 1, new_activity.description);
-	noecho();
-	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
-	wrefresh(win);
-	
-	return win;
+	edit_new_activity();
 }
 
 void stop_new_activity()
@@ -140,19 +129,18 @@ void stop_new_activity()
 	}
 }
 
-WINDOW *edit_new_activity()
+void edit_new_activity()
 {
 	WINDOW *win = newwin(10, 50, (LINES-10)/2, (COLS-50)/2);
 	wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
-
 	mvwprintw(win, 1, 1, "What are you doing: ");
+
 	echo();
 	mvwgetstr(win, 2, 1, new_activity.description);
 	noecho();
+	
 	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
 	wrefresh(win);
-	
-	return win;
 }
 
 char *create_data_files()
@@ -175,6 +163,7 @@ char *create_data_files()
 		fp = fopen(filepath, "w");
 		fclose(fp);
 	}
+
 	return filepath;
 }
 
@@ -199,5 +188,4 @@ void load_file(char *filepath)
 	fp = fopen(filepath, "r");
 	while (EOF != fscanf(fp, "%ld;%ld;%s", &activities_list[i].start_time, &activities_list[i].end_time, 
 				activities_list[i].description)) i++;
-
 }
