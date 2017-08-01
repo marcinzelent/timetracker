@@ -83,7 +83,7 @@ void print_new_activity(WINDOW *win)
 
 	strftime(start_time, sizeof(start_time), "%H:%M:%S", localtime(&new_activity.start_time));
 
-	mvwprintw(win, 1, 1, "Current activity: %s", new_activity.description);
+	mvwprintw(win, 1, 1, "Current activity: %.*s", COLS-20, new_activity.description);
 	mvwprintw(win, 2, 1, "Start time: %s", start_time);
 	mvwprintw(win, 3, 1, "Duration: %ld", (time_now - new_activity.start_time)/60);
 	
@@ -102,7 +102,7 @@ void print_activities(WINDOW *win)
 
 		mvwprintw(win, 4 * i + 1, 1, "Start time: %s", start_time); 
 		mvwprintw(win, 4 * i + 2, 1, "End time: %s", end_time);
-		mvwprintw(win, 4 * i + 3, 1, "Activity: %s", activities_list[i].description);
+		mvwprintw(win, 4 * i + 3, 1, "Activity: %.*s", COLS-13, activities_list[i].description);
 	}
 	
 	wrefresh(win);
