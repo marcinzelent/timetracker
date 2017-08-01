@@ -86,8 +86,8 @@ void print_new_activity(WINDOW *win)
 	mvwprintw(win, 1, 1, "Current activity: %s", new_activity.description);
 	mvwprintw(win, 2, 1, "Start time: %s", start_time);
 	mvwprintw(win, 3, 1, "Duration: %ld", (time_now - new_activity.start_time)/60);
-
-    wrefresh(win);
+	
+	wrefresh(win);
 }
 
 void print_activities(WINDOW *win)
@@ -127,6 +127,8 @@ void stop_new_activity()
 			break;
 		}
 	}
+	
+	save_to_file(create_data_files());
 }
 
 void edit_new_activity()
@@ -188,4 +190,5 @@ void load_file(char *filepath)
 	fp = fopen(filepath, "r");
 	while (EOF != fscanf(fp, "%ld;%ld;%s", &activities_list[i].start_time, &activities_list[i].end_time, 
 				activities_list[i].description)) i++;
+	fclose(fp);
 }
