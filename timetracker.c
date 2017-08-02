@@ -136,11 +136,11 @@ void edit_new_activity()
 	WINDOW *win = newwin(10, 50, (LINES-10)/2, (COLS-50)/2);
 	wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
 	mvwprintw(win, 1, 1, "What are you doing: ");
-
 	echo();
+	curs_set(1);
 	mvwgetstr(win, 2, 1, new_activity.description);
 	noecho();
-	
+	curs_set(0);
 	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
 	wrefresh(win);
 }
