@@ -134,15 +134,24 @@ void stop_new_activity()
 void edit_new_activity()
 {
 	WINDOW *win = newwin(10, 50, (LINES-10)/2, (COLS-50)/2);
+	int i = 1;
+
 	wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
 	mvwprintw(win, 1, 1, "What are you doing: ");
 	echo();
 	curs_set(1);
-	mvwgetstr(win, 2, 1, new_activity.description);
+	//mvwgetstr(win, 2, 1, new_activity.description);
+	wmove(win, 2, 1);
+	while(1)
+	{
+		new_activity.description[i] = wgetch(win);
+		if(new_activity.description[i] == '\n') break;
+		if(i%48==0) wmove(win, i/48+2, 1);
+		i++;
+	}
 	noecho();
 	curs_set(0);
 	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
-	wrefresh(win);
 }
 
 char *create_data_files()
