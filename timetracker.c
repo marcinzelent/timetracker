@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <form.h>
 
 void print_new_activity(WINDOW *win);
 void print_activities(WINDOW *win);
@@ -32,6 +33,7 @@ int main(int argc, char *argv[])
     initscr();
 	noecho();
 	cbreak();
+	keypad(stdscr, TRUE);
 	curs_set(0);
 
 	strcpy(new_activity.description,"N/A");
@@ -111,6 +113,7 @@ void print_activities(WINDOW *win)
 void start_new_activity()
 {
 	new_activity.start_time = time(NULL);
+	memset(&new_activity.description[0], 0, sizeof(new_activity.description));
 	edit_new_activity();
 }
 
@@ -134,23 +137,56 @@ void stop_new_activity()
 void edit_new_activity()
 {
 	WINDOW *win = newwin(10, 50, (LINES-10)/2, (COLS-50)/2);
-	int i = 1;
+	FORM *form;
+	FIELD *field[2];
+	int ch, rows, cols;
 
+	keypad(win, TRUE);
+	field[0] = new_field(7, 48, 2, 1, 0, 0);
+	field[1] = NULL;
+	form = new_form(field);
+	scale_form(form, &rows, &cols);
+	set_form_win(form, win);
+	post_form(form);
 	wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
 	mvwprintw(win, 1, 1, "What are you doing: ");
-	echo();
-	curs_set(1);
-	//mvwgetstr(win, 2, 1, new_activity.description);
 	wmove(win, 2, 1);
-	while(1)
+	curs_set(1);
+    while(ch != 10 && ch != 27)
 	{
-		new_activity.description[i] = wgetch(win);
-		if(new_activity.description[i] == '\n') break;
-		if(i%48==0) wmove(win, i/48+2, 1);
-		i++;
+		ch = wgetch(win);
+		switch(ch)
+		{
+			case KEY_LEFT:
+				form_driver(form, REQ_PREV_CHAR);
+				break;
+			case KEY_RIGHT:
+				form_driver(form, REQ_NEXT_CHAR);
+				break;
+			case KEY_UP:
+				form_driver(form, REQ_NEXT_LINE);
+				break;
+			case KEY_DOWN:
+				form_driver(form, REQ_PREV_LINE);
+				break;
+			case 127:
+				form_driver(form, REQ_PREV_CHAR);
+				form_driver(form, REQ_DEL_CHAR);
+				break;
+			case 27:
+				memset(&new_activity.description[0], 0, sizeof(new_activity.description));
+				break;
+			default:
+				form_driver(form, ch);
+				new_activity.description[strlen(new_activity.description)] = ch;
+				break;
+		}
 	}
-	noecho();
 	curs_set(0);
+	unpost_form(form);
+	free_form(form);
+	free_field(field[0]);
+	delwin(win);
 	new_activity.description[strcspn(new_activity.description, "\n")] = 0;
 }
 
