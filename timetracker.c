@@ -157,6 +157,7 @@ void edit_new_activity()
 		ch = wgetch(win);
 		switch(ch)
 		{
+			/*
 			case KEY_LEFT:
 				form_driver(form, REQ_PREV_CHAR);
 				break;
@@ -169,9 +170,11 @@ void edit_new_activity()
 			case KEY_DOWN:
 				form_driver(form, REQ_PREV_LINE);
 				break;
-			case 127:
+			*/
+				case 127:
 				form_driver(form, REQ_PREV_CHAR);
 				form_driver(form, REQ_DEL_CHAR);
+				new_activity.description[strlen(new_activity.description)-1] = '\0';
 				break;
 			case 27:
 				memset(&new_activity.description[0], 0, sizeof(new_activity.description));
@@ -233,7 +236,7 @@ void load_file(char *filepath)
 	int i;
 	
 	fp = fopen(filepath, "r");
-	while (EOF != fscanf(fp, "%ld;%ld;%s", &activities_list[i].start_time, &activities_list[i].end_time, 
-				activities_list[i].description)) i++;
+	while (EOF != fscanf(fp, "%ld;%ld;%[^\n]", &activities_list[i].start_time, 
+				&activities_list[i].end_time, activities_list[i].description)) i++;
 	fclose(fp);
 }
