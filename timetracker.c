@@ -58,6 +58,7 @@ void edit_new()
 	FIELD *field[2];
 	int ch, rows, cols;
 
+	memset(new.name, 0, strlen(new.name));
 	keypad(win, TRUE);
 	field[0] = new_field(7, 48, 2, 1, 0, 0);
 	field[1] = NULL;
