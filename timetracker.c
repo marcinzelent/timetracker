@@ -6,11 +6,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <form.h>
+#include <dirent.h>
 
 typedef struct activity {
+	char job_number[100];
+	char name[100];
 	time_t start;
 	time_t end;
-	char name[100];
 } activity;
 
 activity new;
@@ -19,33 +21,22 @@ activity activities[100];
 
 void print_new(WINDOW *win)
 {
-	time_t time_now = time(NULL);
-	char start[80];
+	time_t now = time(NULL);
 
-	strftime(start, sizeof(start), "%H:%M:%S", localtime(&new.start));
-
-	mvwprintw(win, 1, 1, "Current activity: %.*s", COLS - 20, new.name);
-	mvwprintw(win, 2, 1, "Start time: %s", start);
-	mvwprintw(win, 3, 1, "Duration: %ld", (time_now - new.start)/60);
+	mvwprintw(win, LINES - 1, 0, "%.*s", COLS - 6, new.name);
+	mvwprintw(win, LINES - 1, COLS - 5, "[%0.1f]",
+		  difftime(now, new.start) / 3600);
 
 	wrefresh(win);
 }
 
 void print_activities(WINDOW *win)
 {
-	char start[80], end[80];
-
-	mvwprintw(win, 0, 1, "Past activities:");
 	for (int i = 0; activities[i].start; i++) {
-		strftime(start, sizeof(start), "%H:%M:%S",
-			 localtime(&activities[i].start));
-		strftime(end, sizeof(end), "%H:%M:%S",
-			 localtime(&activities[i].end));
-
-		mvwprintw(win, 4 * i + 1, 1, "Start time: %s", start);
-		mvwprintw(win, 4 * i + 2, 1, "End time: %s", end);
-		mvwprintw(win, 4 * i + 3, 1, "Activity: %.*s", COLS - 13,
-			  activities[i].name);
+		mvwprintw(win, i + 2, 0, "%s    %.*s", activities[i].job_number,
+			  COLS - 30, activities[i].name);
+		mvwprintw(win, i + 2, COLS - 4, "%0.1f",
+			  difftime(activities[i].end, activities[i].start) / 3600);
 	}
 
 	wrefresh(win);
@@ -112,23 +103,25 @@ void edit_new()
 void start_new()
 {
 	new.start = time(NULL);
+	strcpy(new.job_number, "0000000000");
 	memset(&new.name[0], 0, sizeof(new.name));
 	edit_new();
 }
 
-void save_to_file(char *filepath)
+void save(char *filepath)
 {
 	FILE *fp;
 
 	fp = fopen(filepath, "w");
 	for (int i = 0; activities[i].start; i++) {
-		fprintf(fp, "%ld;%ld;%s\n", activities[i].start,
-			activities[i].end, activities[i].name);
+		fprintf(fp, "%s|%s|%ld|%ld\n", activities[i].job_number, 
+				activities[i].name, activities[i].start, 
+				activities[i].end);
 	}
 	fclose(fp);
 }
 
-char *create_data_files()
+char *create_files()
 {
 	FILE *fp;
 	time_t rawtime;
@@ -163,25 +156,50 @@ void stop_new()
 		}
 	}
 
-	save_to_file(create_data_files());
+	save(create_files());
 }
 
 void load_file(char *filepath)
 {
 	FILE *fp;
-	int i;
+	char buf[100];
+	int i = 0;
+	char d[4][100];
 
 	fp = fopen(filepath, "r");
-	while (EOF != fscanf(fp, "%ld;%ld;%[^\n]", &activities[i].start,
-			     &activities[i].end, activities[i].name))
-		i++;
+	while (fgets (buf, 100, fp) != NULL) {
+		if (sscanf(buf, "%99[^|]|%99[^|]|%99[^|]|%99s",
+					d[0], d[1], d[2], d[3]) == 4) {
+			strcpy(activities[i].job_number, d[0]);
+			strcpy(activities[i].name, d[1]);
+			activities[i].start = (time_t) atoi(d[2]);
+			activities[i].end = (time_t) atoi(d[3]);
+			i++;
+		}
+	}
 	fclose(fp);
 }
 
+void print_archive(WINDOW *win)
+{
+	DIR *d;
+        struct dirent *dir;
+	int i = 1;
+
+        d = opendir(".");
+        if (d) {
+            while ((dir = readdir(d)) != NULL) {
+		mvwprintw(win, i + 1, 1, "%s", dir->d_name);
+		i++;
+            }
+            closedir(d);
+        }
+}
 
 int main(int argc, char *argv[])
 {
-	char command;
+	char cmd;
+	int mode = 1;
 
 	initscr();
 	noecho();
@@ -192,21 +210,33 @@ int main(int argc, char *argv[])
 	strcpy(new.name,"N/A");
 	new.start = time(NULL);
 
-	load_file(create_data_files());
+	load_file(create_files());
 
-	while(command != 'q') {
-		WINDOW *cur_act_win = newwin(5, COLS, 0, 0);
-		wborder(cur_act_win, '|', '|', '-', '-', '+', '+', '+', '+');
-		print_new(cur_act_win);
-		wrefresh(cur_act_win);
+	while(cmd != 'q') {
+		WINDOW *bwin = newwin(LINES, COLS, 0, 0);
+		WINDOW *mwin = newwin(LINES - 4, COLS, 2, 0);
 
-		WINDOW *past_act_win = newwin(LINES-5, COLS, 5, 0);
-		wborder(past_act_win, '|', '|', ' ', '-', '|', '|', '+', '+');
-		print_activities(past_act_win);
-		wrefresh(past_act_win);
+		if (mode == 1) mvwprintw(bwin, 0, 0, "Today");
+		else if(mode == 2) mvwprintw(bwin, 0, 0, "Archive");
+		mvwhline(bwin, 1, 0, 0, COLS);
+		mvwhline(bwin, LINES - 2, 0, 0, COLS);
+		print_new(bwin);
+		wrefresh(bwin);
 
-		command = wgetch(cur_act_win);
-		switch(command) {
+		if (mode == 1) {
+			mvwprintw(mwin, 0, 0, "Job number    Name");
+			mvwprintw(mwin, 0, COLS - 6, "Time");
+		}
+		else if (mode == 2) {
+			mvwprintw(mwin, 0, 0, "Day");
+		}
+		mvwhline(mwin, 1, 0, 0, COLS);
+		if (mode == 1) print_activities(mwin);
+		else if (mode == 2) print_archive(mwin);
+		wrefresh(mwin);
+
+		cmd = wgetch(bwin);
+		switch(cmd) {
 		case 's':
 			start_new();
 			break;
@@ -217,9 +247,15 @@ int main(int argc, char *argv[])
 			edit_new();
 			break;
 		case 'v':
-			save_to_file(create_data_files());
+			save(create_files());
 			break;
 		case 'q':
+			break;
+		case '1':
+			mode = 1;
+			break;
+		case '2':
+			mode = 2;
 			break;
 		default :
 			break;
