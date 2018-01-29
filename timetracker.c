@@ -31,28 +31,28 @@ void print_new(WINDOW *win)
 
 void print_activities(WINDOW *win)
 {
-	ITEM **my_items;
-	MENU *my_menu;
-	int n_choices;
+	ITEM **items;
+	MENU *menu;
+	int n;
 	ITEM *cur_item;
 
-	while (activities[n_choices].start) n_choices++;
-	my_items = (ITEM **) calloc(n_choices + 1, sizeof(ITEM *));
-	for (int i = 0; i < n_choices; ++i) {
+	while (activities[n].start) n++;
+	items = (ITEM **) calloc(n + 1, sizeof(ITEM *));
+	for (int i = 0; i < n; ++i) {
 		char name[100][100];
-		char time[8][100];
+		char time[100][8];
 		int dur = difftime(activities[i].end, activities[i].start);
 		snprintf(name[i], 100, "%-*s", COLS - 7,  activities[i].name);
 		snprintf(time[i], 8, "%0.1f   ", dur / 3600);
-		my_items[i] = new_item(name[i], time[i]);
+		items[i] = new_item(name[i], time[i]);
 	}
-	my_items[n_choices] = (ITEM *) NULL;
-	my_menu = new_menu((ITEM **) my_items);
-	set_menu_win(my_menu, win);
-	set_menu_sub(my_menu, derwin(win, 0, 0, 2, 0));
-	set_menu_format(my_menu, LINES - 6, 1);
-	set_menu_mark(my_menu, 0);
-	post_menu(my_menu);
+	items[n] = (ITEM *) NULL;
+	menu = new_menu((ITEM **) items);
+	set_menu_win(menu, win);
+	set_menu_sub(menu, derwin(win, 0, 0, 2, 0));
+	set_menu_format(menu, LINES - 6, 1);
+	set_menu_mark(menu, 0);
+	post_menu(menu);
 
 	wrefresh(win);
 }
