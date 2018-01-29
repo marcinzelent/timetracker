@@ -9,7 +9,6 @@
 #include <dirent.h>
 
 typedef struct activity {
-	char job_number[100];
 	char name[100];
 	time_t start;
 	time_t end;
@@ -33,8 +32,7 @@ void print_new(WINDOW *win)
 void print_activities(WINDOW *win)
 {
 	for (int i = 0; activities[i].start; i++) {
-		mvwprintw(win, i + 2, 0, "%s    %.*s", activities[i].job_number,
-			  COLS - 30, activities[i].name);
+		mvwprintw(win, i + 2, 0, "%.*s", COLS - 9, activities[i].name);
 		mvwprintw(win, i + 2, COLS - 4, "%0.1f",
 			  difftime(activities[i].end, activities[i].start) / 3600);
 	}
@@ -57,7 +55,7 @@ void edit_new()
 	scale_form(form, &rows, &cols);
 	set_form_win(form, win);
 	post_form(form);
-	wborder(win, '|', '|', '-', '-', '+', '+', '+', '+');
+	box(win, 0, 0);
 	mvwprintw(win, 1, 1, "What are you doing: ");
 	wmove(win, 2, 1);
 	curs_set(1);
@@ -103,7 +101,6 @@ void edit_new()
 void start_new()
 {
 	new.start = time(NULL);
-	strcpy(new.job_number, "0000000000");
 	memset(&new.name[0], 0, sizeof(new.name));
 	edit_new();
 }
@@ -114,9 +111,8 @@ void save(char *filepath)
 
 	fp = fopen(filepath, "w");
 	for (int i = 0; activities[i].start; i++) {
-		fprintf(fp, "%s|%s|%ld|%ld\n", activities[i].job_number, 
-				activities[i].name, activities[i].start, 
-				activities[i].end);
+		fprintf(fp, "%s|%ld|%ld\n", activities[i].name,
+			activities[i].start, activities[i].end);
 	}
 	fclose(fp);
 }
@@ -164,16 +160,15 @@ void load_file(char *filepath)
 	FILE *fp;
 	char buf[100];
 	int i = 0;
-	char d[4][100];
+	char d[3][100];
 
 	fp = fopen(filepath, "r");
 	while (fgets (buf, 100, fp) != NULL) {
-		if (sscanf(buf, "%99[^|]|%99[^|]|%99[^|]|%99s",
-					d[0], d[1], d[2], d[3]) == 4) {
-			strcpy(activities[i].job_number, d[0]);
-			strcpy(activities[i].name, d[1]);
-			activities[i].start = (time_t) atoi(d[2]);
-			activities[i].end = (time_t) atoi(d[3]);
+		if (sscanf(buf, "%99[^|]|%99[^|]|%99s",
+					d[0], d[1], d[2]) == 3) {
+			strcpy(activities[i].name, d[0]);
+			activities[i].start = (time_t) atoi(d[1]);
+			activities[i].end = (time_t) atoi(d[2]);
 			i++;
 		}
 	}
@@ -216,7 +211,13 @@ int main(int argc, char *argv[])
 		WINDOW *bwin = newwin(LINES, COLS, 0, 0);
 		WINDOW *mwin = newwin(LINES - 4, COLS, 2, 0);
 
-		if (mode == 1) mvwprintw(bwin, 0, 0, "Today");
+		if (mode == 1) {
+			time_t now = time(0);
+			char buf[11];
+
+			strftime(buf, 11, "%d.%m.%Y", localtime(&now));
+			mvwprintw(bwin, 0, 0, "Today (%s)", buf);
+		}
 		else if(mode == 2) mvwprintw(bwin, 0, 0, "Archive");
 		mvwhline(bwin, 1, 0, 0, COLS);
 		mvwhline(bwin, LINES - 2, 0, 0, COLS);
@@ -224,7 +225,7 @@ int main(int argc, char *argv[])
 		wrefresh(bwin);
 
 		if (mode == 1) {
-			mvwprintw(mwin, 0, 0, "Job number    Name");
+			mvwprintw(mwin, 0, 0, "Name");
 			mvwprintw(mwin, 0, COLS - 6, "Time");
 		}
 		else if (mode == 2) {
