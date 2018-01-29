@@ -2,10 +2,11 @@
 #include <time.h>
 #include <string.h>
 #include <ncurses.h>
+#include <form.h>
+#include <menu.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <form.h>
 #include <dirent.h>
 
 typedef struct activity {
@@ -16,7 +17,6 @@ typedef struct activity {
 
 activity new;
 activity activities[100];
-
 
 void print_new(WINDOW *win)
 {
@@ -31,11 +31,28 @@ void print_new(WINDOW *win)
 
 void print_activities(WINDOW *win)
 {
-	for (int i = 0; activities[i].start; i++) {
-		mvwprintw(win, i + 2, 0, "%.*s", COLS - 9, activities[i].name);
-		mvwprintw(win, i + 2, COLS - 4, "%0.1f",
-			  difftime(activities[i].end, activities[i].start) / 3600);
+	ITEM **my_items;
+	MENU *my_menu;
+	int n_choices;
+	ITEM *cur_item;
+
+	while (activities[n_choices].start) n_choices++;
+	my_items = (ITEM **) calloc(n_choices + 1, sizeof(ITEM *));
+	for (int i = 0; i < n_choices; ++i) {
+		char name[100][100];
+		char time[8][100];
+		int dur = difftime(activities[i].end, activities[i].start);
+		snprintf(name[i], 100, "%-*s", COLS - 7,  activities[i].name);
+		snprintf(time[i], 8, "%0.1f   ", dur / 3600);
+		my_items[i] = new_item(name[i], time[i]);
 	}
+	my_items[n_choices] = (ITEM *) NULL;
+	my_menu = new_menu((ITEM **) my_items);
+	set_menu_win(my_menu, win);
+	set_menu_sub(my_menu, derwin(win, 0, 0, 2, 0));
+	set_menu_format(my_menu, LINES - 6, 1);
+	set_menu_mark(my_menu, 0);
+	post_menu(my_menu);
 
 	wrefresh(win);
 }
@@ -62,20 +79,6 @@ void edit_new()
 	while (ch != 10 && ch != 27) {
 		ch = wgetch(win);
 		switch (ch) {
-		/*
-		case KEY_LEFT:
-			form_driver(form, REQ_PREV_CHAR);
-			break;
-		case KEY_RIGHT:
-			form_driver(form, REQ_NEXT_CHAR);
-			break;
-		case KEY_UP:
-			form_driver(form, REQ_NEXT_LINE);
-			break;
-		case KEY_DOWN:
-			form_driver(form, REQ_PREV_LINE);
-			break;
-		*/
 		case 127:
 			form_driver(form, REQ_PREV_CHAR);
 			form_driver(form, REQ_DEL_CHAR);
