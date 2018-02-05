@@ -41,9 +41,9 @@ void print_activities(WINDOW *win)
 	for (int i = 0; i < n; ++i) {
 		char name[100][100];
 		char time[100][8];
-		int dur = difftime(activities[i].end, activities[i].start);
+		long dur = difftime(activities[i].end, activities[i].start);
 		snprintf(name[i], 100, "%-*s", COLS - 7,  activities[i].name);
-		snprintf(time[i], 8, "%0.1f   ", dur / 3600);
+		snprintf(time[i], 8, "%0.1f    ", dur / 3600.0f);
 		items[i] = new_item(name[i], time[i]);
 	}
 	items[n] = (ITEM *) NULL;
