@@ -15,8 +15,7 @@ typedef struct activity {
 	time_t end;
 } activity;
 
-activity new;
-activity activities[100];
+activity new, activities[100];
 
 void print_new(WINDOW *win)
 {
@@ -49,11 +48,10 @@ void print_activities(WINDOW *win)
 	items[n] = (ITEM *) NULL;
 	menu = new_menu((ITEM **) items);
 	set_menu_win(menu, win);
-	set_menu_sub(menu, derwin(win, 0, 0, 2, 0));
+	set_menu_sub(menu, derwin(win, 0, 0, 4, 0));
 	set_menu_format(menu, LINES - 6, 1);
 	set_menu_mark(menu, 0);
 	post_menu(menu);
-
 	wrefresh(win);
 }
 
@@ -187,59 +185,46 @@ void print_archive(WINDOW *win)
         d = opendir(".");
         if (d) {
             while ((dir = readdir(d)) != NULL) {
-		mvwprintw(win, i + 1, 1, "%s", dir->d_name);
+		mvwprintw(win, i + 3, 1, "%s", dir->d_name);
 		i++;
             }
             closedir(d);
         }
 }
 
-int main(int argc, char *argv[])
+WINDOW *print_main_window()
 {
-	char cmd;
-	int mode = 1;
+	WINDOW *win = newwin(LINES, COLS, 0, 0);
 
-	initscr();
-	noecho();
-	cbreak();
-	keypad(stdscr, TRUE);
-	curs_set(0);
+	time_t now = time(0);
+	char buf[11];
+	strftime(buf, 11, "%d.%m.%Y", localtime(&now));
+	mvwprintw(win, 0, 0, "Today (%s)", buf);
 
-	strcpy(new.name,"N/A");
-	new.start = time(NULL);
+	mvwhline(win, 1, 0, 0, COLS);
+	mvwprintw(win, 2, 0, "Name");
+	mvwprintw(win, 2, COLS - 6, "Time");
+	mvwhline(win, 3, 0, 0, COLS);
 
-	load_file(create_files());
+	print_activities(win);
+	mvwhline(win, LINES - 2, 0, 0, COLS);
 
-	while(cmd != 'q') {
-		WINDOW *bwin = newwin(LINES, COLS, 0, 0);
-		WINDOW *mwin = newwin(LINES - 4, COLS, 2, 0);
+	print_new(win);
 
-		if (mode == 1) {
-			time_t now = time(0);
-			char buf[11];
+	wrefresh(win);
 
-			strftime(buf, 11, "%d.%m.%Y", localtime(&now));
-			mvwprintw(bwin, 0, 0, "Today (%s)", buf);
-		}
-		else if(mode == 2) mvwprintw(bwin, 0, 0, "Archive");
-		mvwhline(bwin, 1, 0, 0, COLS);
-		mvwhline(bwin, LINES - 2, 0, 0, COLS);
-		print_new(bwin);
-		wrefresh(bwin);
+	return win;
+}
 
-		if (mode == 1) {
-			mvwprintw(mwin, 0, 0, "Name");
-			mvwprintw(mwin, 0, COLS - 6, "Time");
-		}
-		else if (mode == 2) {
-			mvwprintw(mwin, 0, 0, "Day");
-		}
-		mvwhline(mwin, 1, 0, 0, COLS);
-		if (mode == 1) print_activities(mwin);
-		else if (mode == 2) print_archive(mwin);
-		wrefresh(mwin);
+int main_window_controller()
+{
+	WINDOW *win;
+	int cmd, out;
 
-		cmd = wgetch(bwin);
+	while (cmd != 'q' && cmd != '2') {
+		win = print_main_window();
+
+		cmd = wgetch(win);
 		switch(cmd) {
 		case 's':
 			start_new();
@@ -254,18 +239,94 @@ int main(int argc, char *argv[])
 			save(create_files());
 			break;
 		case 'q':
-			break;
-		case '1':
-			mode = 1;
+			out = -1;
 			break;
 		case '2':
-			mode = 2;
+			out = 2;
 			break;
-		default :
+		}
+
+		delwin(win);
+	}
+
+	return out;
+}
+
+WINDOW *print_archive_window()
+{
+	WINDOW *win = newwin(LINES, COLS, 0, 0);
+
+	mvwprintw(win, 0, 0, "Archive");
+	mvwhline(win, 1, 0, 0, COLS);
+
+	mvwprintw(win, 2, 0, "Day");
+	mvwhline(win, 3, 0, 0, COLS);
+
+	print_archive(win);
+	mvwhline(win, LINES - 2, 0, 0, COLS);
+
+	print_new(win);
+
+	wrefresh(win);
+
+	return win;
+}
+
+int archive_window_controller()
+{
+	WINDOW *win;
+	int cmd, out;
+
+	while (cmd != 'q' && cmd != '1') {
+		win = print_archive_window();
+
+		cmd = wgetch(win);
+		switch (cmd) {
+		case 'q':
+			out = -1;
+			break;
+		case '1':
+			out = 1;
+			break;
+		}
+
+		delwin(win);
+	}
+
+	return out;
+}
+
+void window_controller()
+{
+	int i = 1;
+
+	while (i != -1) {
+		switch (i) {
+		case 1:
+			i = main_window_controller();
+			break;
+		case 2:
+			i = archive_window_controller();
 			break;
 		}
 	}
-    endwin();
+}
 
-    return 0;
+int main(int argc, char *argv[])
+{
+	initscr();
+	noecho();
+	cbreak();
+	keypad(stdscr, TRUE);
+	curs_set(0);
+
+	strcpy(new.name,"N/A");
+	new.start = time(NULL);
+
+	load_file(create_files());
+
+	window_controller();
+	endwin();
+
+	return 0;
 }
