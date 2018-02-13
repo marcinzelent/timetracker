@@ -3,7 +3,6 @@
 #include <string.h>
 #include <ncurses.h>
 #include <form.h>
-#include <menu.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -30,28 +29,22 @@ void print_new(WINDOW *win)
 
 void print_activities(WINDOW *win)
 {
-	ITEM **items;
-	MENU *menu;
-	int n;
-	ITEM *cur_item;
+	int sel;
 
-	while (activities[n].start) n++;
-	items = (ITEM **) calloc(n + 1, sizeof(ITEM *));
-	for (int i = 0; i < n; ++i) {
-		char name[100][100];
-		char time[100][8];
+	for (int i = 0; activities[i].start; i++) {
+		char name[100];
+		char time[7];
 		long dur = difftime(activities[i].end, activities[i].start);
-		snprintf(name[i], 100, "%-*s", COLS - 7,  activities[i].name);
-		snprintf(time[i], 8, "%0.1f    ", dur / 3600.0f);
-		items[i] = new_item(name[i], time[i]);
+		snprintf(name, 100, "%-*s", COLS - 6,  activities[i].name);
+		snprintf(time, 7, "%0.1f    ", dur / 3600.0f);
+		strcat(name, time);
+		if (i == sel) {
+			wattron(win, COLOR_PAIR(1));
+			mvwprintw(win, i + 4, 0, name);
+			wattroff(win, COLOR_PAIR(1));
+		} else mvwprintw(win, i + 4, 0, name);
 	}
-	items[n] = (ITEM *) NULL;
-	menu = new_menu((ITEM **) items);
-	set_menu_win(menu, win);
-	set_menu_sub(menu, derwin(win, 0, 0, 4, 0));
-	set_menu_format(menu, LINES - 6, 1);
-	set_menu_mark(menu, 0);
-	post_menu(menu);
+
 	wrefresh(win);
 }
 
@@ -315,10 +308,13 @@ void window_controller()
 int main(int argc, char *argv[])
 {
 	initscr();
+	use_default_colors();
 	noecho();
 	cbreak();
 	keypad(stdscr, TRUE);
 	curs_set(0);
+	start_color();
+	init_pair(1, COLOR_BLACK, COLOR_WHITE);
 
 	strcpy(new.name,"N/A");
 	new.start = time(NULL);
