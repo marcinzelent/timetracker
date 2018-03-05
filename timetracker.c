@@ -29,20 +29,23 @@ void print_new(WINDOW *win)
 
 void print_activities(WINDOW *win, int sel, int off)
 {
-	for (int i = 0; activities[i].start; i++) {
-		char name[100];
+	for (int i = 0; activities[i].start && i < LINES - 6; i++) {
+		char act[COLS];
 		char time[7];
 		long dur = difftime(activities[i + off].end,
 				    activities[i + off].start);
-		snprintf(name, 100, "%-*s", COLS - 6,
-			 activities[i + off].name);
+		if (COLS - 6 > strlen(activities[i + off].name))
+			snprintf(act, COLS, "%-*s", COLS - 6,
+				 activities[i + off].name);
+		else snprintf(act, COLS, "%.*s ", COLS - 7,
+			      activities[i + off].name);
 		snprintf(time, 7, "%0.1f    ", dur / 3600.0f);
-		strcat(name, time);
+		strcat(act, time);
 		if (i == sel) {
 			wattron(win, COLOR_PAIR(1));
-			mvwprintw(win, i + 4, 0, name);
+			mvwprintw(win, i + 4, 0, act);
 			wattroff(win, COLOR_PAIR(1));
-		} else mvwprintw(win, i + 4, 0, name);
+		} else mvwprintw(win, i + 4, 0, act);
 	}
 
 	wrefresh(win);
@@ -161,6 +164,7 @@ void delete_activity(int i)
 		activities[i + 1].start = 0;
 		activities[i + 1].end = 0;
 	}
+	save(create_files());
 }
 
 void load_file(char *filepath)
@@ -269,6 +273,7 @@ int main_window_controller()
 				sel--;
 				cur--;
 			}
+			break;
 		case 'v':
 			save(create_files());
 			break;
