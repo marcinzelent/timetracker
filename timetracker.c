@@ -27,15 +27,15 @@ void print_new(WINDOW *win)
 	wrefresh(win);
 }
 
-void print_activities(WINDOW *win)
+void print_activities(WINDOW *win, int sel, int off)
 {
-	int sel;
-
 	for (int i = 0; activities[i].start; i++) {
 		char name[100];
 		char time[7];
-		long dur = difftime(activities[i].end, activities[i].start);
-		snprintf(name, 100, "%-*s", COLS - 6,  activities[i].name);
+		long dur = difftime(activities[i + off].end,
+				    activities[i + off].start);
+		snprintf(name, 100, "%-*s", COLS - 6,
+			 activities[i + off].name);
 		snprintf(time, 7, "%0.1f    ", dur / 3600.0f);
 		strcat(name, time);
 		if (i == sel) {
@@ -138,15 +138,29 @@ void stop_new()
 {
 	new.end = time(NULL);
 
-	for(int i = 0; i < 100; i++) {
+	for (int i = 0; i < 100; i++)
 		if (!activities[i].start) {
 			activities[i] = new;
-			strcpy(new.name, "N/A");
 			break;
 		}
-	}
 
 	save(create_files());
+
+	strcpy(new.name, "N/A");
+	new.start = time (NULL);
+}
+
+void delete_activity(int i)
+{
+	activities[i].name[0] = 0;
+	activities[i].start = 0;
+	activities[i].end = 0;
+	for (i + 1; activities[i + 1].start; i++) {
+		activities[i] = activities[i + 1];
+		activities[i + 1].name[0] = 0;
+		activities[i + 1].start = 0;
+		activities[i + 1].end = 0;
+	}
 }
 
 void load_file(char *filepath)
@@ -185,9 +199,10 @@ void print_archive(WINDOW *win)
         }
 }
 
-WINDOW *print_main_window()
+WINDOW *print_main_window(int sel, int off)
 {
 	WINDOW *win = newwin(LINES, COLS, 0, 0);
+	keypad(win, TRUE);
 
 	time_t now = time(0);
 	char buf[11];
@@ -199,7 +214,7 @@ WINDOW *print_main_window()
 	mvwprintw(win, 2, COLS - 6, "Time");
 	mvwhline(win, 3, 0, 0, COLS);
 
-	print_activities(win);
+	print_activities(win, sel, off);
 	mvwhline(win, LINES - 2, 0, 0, COLS);
 
 	print_new(win);
@@ -212,13 +227,33 @@ WINDOW *print_main_window()
 int main_window_controller()
 {
 	WINDOW *win;
-	int cmd, out;
+	int cmd = 0, out = 0, sel = 0, cur = 0, off = 0;
 
 	while (cmd != 'q' && cmd != '2') {
-		win = print_main_window();
+		win = print_main_window(sel, off);
+		int n = 0;
+		while (activities[n].start) n++;
 
 		cmd = wgetch(win);
 		switch(cmd) {
+		case KEY_UP:
+			if (sel == 0 && cur != 0) {
+				off--;
+				cur--;
+			} else if (sel > 0) {
+				sel--;
+				cur--;
+			}
+			break;
+		case KEY_DOWN:
+			if (sel == LINES - 7 && cur != n - 1) {
+				off++;
+				cur++;
+			} else if (sel < LINES - 7 && cur != n - 1) {
+				sel++;
+				cur++;
+			}
+			break;
 		case 's':
 			start_new();
 			break;
@@ -228,6 +263,12 @@ int main_window_controller()
 		case 'e':
 			edit_new();
 			break;
+		case 'x':
+			delete_activity(cur);
+			if (cur == n - 1) {
+				sel--;
+				cur--;
+			}
 		case 'v':
 			save(create_files());
 			break;
