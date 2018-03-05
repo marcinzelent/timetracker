@@ -191,15 +191,28 @@ void print_archive(WINDOW *win)
 {
 	DIR *d;
         struct dirent *dir;
-	int i = 1;
+	int i = 0, j = 1, n = 0;
+	char tdir[80];
 
-        d = opendir(".");
+	snprintf(tdir, sizeof(tdir), "%s/Timesheets", getenv("HOME"));
+
+        d = opendir(tdir);
         if (d) {
-            while ((dir = readdir(d)) != NULL) {
-		mvwprintw(win, i + 3, 1, "%s", dir->d_name);
-		i++;
-            }
-            closedir(d);
+		while ((dir = readdir(d)) != NULL)
+			if (strcmp(dir->d_name, "timesheet") > 8) n++;
+		char files[n][25];
+		rewinddir(d);
+		while ((dir = readdir(d)) != NULL)
+			if (strcmp(dir->d_name, "timesheet") > 8) {
+				strcpy(files[i], dir->d_name);
+				i++;
+			}
+		while (j < LINES - 5) {
+			mvwprintw(win, j + 3, 1, "%s", files[n - 1]);
+			j++;
+			n--;
+		}
+		closedir(d);
         }
 }
 
